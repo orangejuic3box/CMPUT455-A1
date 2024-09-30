@@ -109,6 +109,9 @@ class CommandInterface:
     def opponent(self):
         assert self.player == 1 or self.player == 2
         return 3 - self.player
+    
+    def switch_player(self):
+        self.player = self.opponent()
 
     def show(self, args):
         for row in self.board:
