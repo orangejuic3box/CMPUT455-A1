@@ -94,6 +94,9 @@ class CommandInterface:
     #===============================================================================================
 
     def game(self, args):
+        '''
+        Resets a new game for a given n by m board
+        '''
         if not self.arg_check(args, "n m"):
             return False
         n, m = [int(x) for x in args]
@@ -101,27 +104,37 @@ class CommandInterface:
             print("Invalid board size:", n, m, file=sys.stderr)
             return False
         
-        self.board = []
+        self.board = [] #lists of lists which will contain who occupies which space
         for i in range(m):
             self.board.append([None]*n)
         self.player = 1
         return True
     
     def opponent(self):
+        '''
+        Returns the OPP of the given player
+        '''
         assert self.player == 1 or self.player == 2
         return 3 - self.player
     
     def switch_player(self):
+        '''
+        Switches the current player
+        '''
         self.player = self.opponent()
 
     def show(self, args):
+        '''
+        Prints the board
+        '''
         for row in self.board:
             for x in row:
                 if x is None:
                     print(".", end="")
                 else:
                     print(x, end="")
-            print()                    
+            print()
+        print(self.board)                    
         return True
 
     def is_legal_reason(self, x, y, num):
@@ -161,41 +174,51 @@ class CommandInterface:
         return True, ""
     
     def is_legal(self, x, y, num):
+        '''
+        Given a x,y position on the board and player "num" to play,
+        "plays" the move and then checks the constraints on the rows
+        and columns. Makes sure the 3 conseucutive rule and not over half
+        in a row/col is not violated.
+        '''
         if self.board[y][x] is not None:
             return False
-        
+        #CHECKING THE ROWS AGAINST THE RULES
         consecutive = 0
         count = 0
         self.board[y][x] = num
+        # checks for consecutive rule
         for row in range(len(self.board)):
             if self.board[row][x] == num:
                 count += 1
                 consecutive += 1
                 if consecutive >= 3:
-                    self.board[y][x] = None
+                    self.board[y][x] = None #resetting board bc not valid
                     return False
             else:
                 consecutive = 0
+        # checks for the must not occupy half the row
         if count > len(self.board) // 2 + len(self.board) % 2:
-            self.board[y][x] = None
+            self.board[y][x] = None #resetting board
             return False
-        
+        #CHECKING THE COLUMNS AGAINST THE RULES
         consecutive = 0
         count = 0
+        # checks for consecutive rule
         for col in range(len(self.board[0])):
             if self.board[y][col] == num:
                 count += 1
                 consecutive += 1
                 if consecutive >= 3:
-                    self.board[y][x] = None
+                    self.board[y][x] = None #resetting board
                     return False
             else:
                 consecutive = 0
+        # checks for the must not occupy half the column
         if count > len(self.board[0]) // 2 + len(self.board[0]) % 2:
-            self.board[y][x] = None
-            return False
-
-        self.board[y][x] = None
+            self.board[y][x] = None #resetting board bc not valid
+            return False 
+        #PASSED ALL CHECKS, IS VALID
+        self.board[y][x] = None #resetting board
         return True
     
     def valid_move(self, x, y, num):
@@ -231,6 +254,7 @@ class CommandInterface:
             self.player = 2
         else:
             self.player = 1
+        print(self.board)
         return True
     
     def legal(self, args):
