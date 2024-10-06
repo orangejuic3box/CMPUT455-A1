@@ -19,10 +19,12 @@ class CommandInterface:
             "genmove" : self.genmove,
             "winner" : self.winner,
             "timelimit" : self.timelimit,
-            "solve" : self.solve
+            "solve" : self.solve,
+            "undo" : self.undo
         }
         self.board = [[None]]
         self.player = 1
+        self.moves = []
     
     #===============================================================================================
     # VVVVVVVVVV START of PREDEFINED FUNCTIONS. DO NOT MODIFY. VVVVVVVVVV
@@ -137,10 +139,29 @@ class CommandInterface:
         print(self.board)                    
         return True
 
+    def undo(self, args):
+        '''
+        Undoes a move and switches the player
+        '''
+        print("before")
+        print(self.moves)
+        print(self.board)
+        x, y = self.moves.pop()
+        self.board[y][x] = None
+        self.switch_player()
+        print(self.moves)
+        print(self.board)
+        return True
+
     def is_legal_reason(self, x, y, num):
+        '''
+        Given an x,y position and player "num" to play,
+        plays the given moves and returns why the move was
+        valid or not
+        '''
         if self.board[y][x] is not None:
             return False, "occupied"
-        
+        #CHECKING COLUMNS
         consecutive = 0
         count = 0
         self.board[y][x] = num
@@ -150,11 +171,11 @@ class CommandInterface:
                 consecutive += 1
                 if consecutive >= 3:
                     self.board[y][x] = None
-                    return False, "three in a row"
+                    return False, "three in a col"
             else:
                 consecutive = 0
         too_many = count > len(self.board) // 2 + len(self.board) % 2
-        
+        #CHECKING ROWS
         consecutive = 0
         count = 0
         for col in range(len(self.board[0])):
@@ -167,8 +188,9 @@ class CommandInterface:
             else:
                 consecutive = 0
         if too_many or count > len(self.board[0]) // 2 + len(self.board[0]) % 2:
+            print(self.board)
             self.board[y][x] = None
-            return False, "too many " + str(num)
+            return False, "overhalf" + str(num)
 
         self.board[y][x] = None
         return True, ""
@@ -182,7 +204,7 @@ class CommandInterface:
         '''
         if self.board[y][x] is not None:
             return False
-        #CHECKING THE ROWS AGAINST THE RULES
+        #CHECKING THE COLUMNS AGAINST THE RULES
         consecutive = 0
         count = 0
         self.board[y][x] = num
@@ -200,7 +222,7 @@ class CommandInterface:
         if count > len(self.board) // 2 + len(self.board) % 2:
             self.board[y][x] = None #resetting board
             return False
-        #CHECKING THE COLUMNS AGAINST THE RULES
+        #CHECKING THE ROWS AGAINST THE RULES
         consecutive = 0
         count = 0
         # checks for consecutive rule
@@ -222,12 +244,21 @@ class CommandInterface:
         return True
     
     def valid_move(self, x, y, num):
+        '''
+        Checks if a move is valid by checking bounds and then checking
+        game rule constraints
+        '''
         return  x >= 0 and x < len(self.board[0]) and\
                 y >= 0 and y < len(self.board) and\
                 (num == 0 or num == 1) and\
                 self.is_legal(x, y, num)
 
     def play(self, args):
+        '''
+        Given an x,y and player "num" to play,
+        plays the given move, updating the board
+        and switching players.
+        '''
         err = ""
         if len(args) != 3:
             print("= illegal move: " + " ".join(args) + " wrong number of arguments\n")
@@ -242,7 +273,7 @@ class CommandInterface:
             print("= illegal move: " + " ".join(args) + " wrong coordinate\n")
             return False
         if args[2] != '0' and args[2] != '1':
-            print("= illegal move: " + " ".join(args) + " wrong number\n")
+            print("= illegal move: " + " ".join(args) + " wrong player num\n")
             return False
         num = int(args[2])
         legal, reason = self.is_legal_reason(x, y, num)
@@ -250,14 +281,18 @@ class CommandInterface:
             print("= illegal move: " + " ".join(args) + " " + reason + "\n")
             return False
         self.board[y][x] = num
-        if self.player == 1:
-            self.player = 2
-        else:
-            self.player = 1
+        self.switch_player()
+        self.moves.append([x, y])
+        self.show()
+        print(self.moves)
         print(self.board)
         return True
     
     def legal(self, args):
+        '''
+        Checks if given x,y position and player "num"
+        to play is a legal (open and not violating) move.
+        '''
         if not self.arg_check(args, "x y number"):
             return False
         x, y, num = [int(x) for x in args]
@@ -268,6 +303,10 @@ class CommandInterface:
         return True
     
     def get_legal_moves(self):
+        '''
+        Returns all legal moves for ALL players
+        In string format "x y player"
+        '''
         moves = []
         for y in range(len(self.board)):
             for x in range(len(self.board[0])):
@@ -277,6 +316,10 @@ class CommandInterface:
         return moves
 
     def genmove(self, args):
+        '''
+        Gets a random possible move, 
+        prints "resign" if not possible moves are left
+        '''
         moves = self.get_legal_moves()
         if len(moves) == 0:
             print("resign")
@@ -287,6 +330,10 @@ class CommandInterface:
         return True
     
     def winner(self, args):
+        '''
+        Returns either the winning player or prints
+        "unfinshed" if game is not over
+        '''
         if len(self.get_legal_moves()) == 0:
             if self.player == 1:
                 print(2)
