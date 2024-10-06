@@ -5,6 +5,10 @@
 import sys
 import random
 import cProfile
+import time
+
+# player 1 = OR
+# player 0 = AND
 
 class CommandInterface:
 
@@ -25,6 +29,7 @@ class CommandInterface:
         self.board = [[None]]
         self.player = 1
         self.moves = []
+        self.order = 0
     
     #===============================================================================================
     # VVVVVVVVVV START of PREDEFINED FUNCTIONS. DO NOT MODIFY. VVVVVVVVVV
@@ -143,19 +148,20 @@ class CommandInterface:
         '''
         Undoes a move and switches the player
         '''
-        print("before")
-        print(self.moves)
-        print(self.board)
-        x, y = self.moves.pop()
+        # print("before")
+        # print(self.moves)
+        # print(self.board)
+        order, player, x, y, num = self.moves.pop()
         self.board[y][x] = None
         self.switch_player()
-        print(self.moves)
-        print(self.board)
+        self.order -= 1
+        # print(self.moves)
+        # print(self.board)
         return True
 
     def is_legal_reason(self, x, y, num):
         '''
-        Given an x,y position and player "num" to play,
+        Given an x,y position and digit "num" to play,
         plays the given moves and returns why the move was
         valid or not
         '''
@@ -197,7 +203,7 @@ class CommandInterface:
     
     def is_legal(self, x, y, num):
         '''
-        Given a x,y position on the board and player "num" to play,
+        Given a x,y position on the board and digit "num" to play,
         "plays" the move and then checks the constraints on the rows
         and columns. Makes sure the 3 conseucutive rule and not over half
         in a row/col is not violated.
@@ -255,7 +261,7 @@ class CommandInterface:
 
     def play(self, args):
         '''
-        Given an x,y and player "num" to play,
+        Given an x,y and binary "num" to play,
         plays the given move, updating the board
         and switching players.
         '''
@@ -273,19 +279,22 @@ class CommandInterface:
             print("= illegal move: " + " ".join(args) + " wrong coordinate\n")
             return False
         if args[2] != '0' and args[2] != '1':
-            print("= illegal move: " + " ".join(args) + " wrong player num\n")
+            print("= illegal move: " + " ".join(args) + " wrong binary num\n")
             return False
         num = int(args[2])
         legal, reason = self.is_legal_reason(x, y, num)
         if not legal:
             print("= illegal move: " + " ".join(args) + " " + reason + "\n")
             return False
+        self.moves.append([self.order, "player"+str(self.player), x, y, num])
         self.board[y][x] = num
         self.switch_player()
-        self.moves.append([x, y])
-        self.show()
-        print(self.moves)
-        print(self.board)
+        self.order += 1
+        # self.show(args)
+        # print("moves")
+        # print(self.moves)
+        # print("board by rows")
+        # print(self.board)
         return True
     
     def legal(self, args):
@@ -305,14 +314,15 @@ class CommandInterface:
     def get_legal_moves(self):
         '''
         Returns all legal moves for ALL players
-        In string format "x y player"
+        In list str format [x, y, digit]
         '''
         moves = []
         for y in range(len(self.board)):
             for x in range(len(self.board[0])):
                 for num in range(2):
                     if self.is_legal(x, y, num):
-                        moves.append([str(x), str(y), str(num)])
+                        # moves.append([x, y, num])
+                        moves.append([str(x), str(y), str(num)]) #was str really necessaRY?
         return moves
 
     def genmove(self, args):
@@ -329,18 +339,72 @@ class CommandInterface:
             print(" ".join(rand_move))
         return True
     
-    def winner(self, args):
+    # CODE GIVEN WINNER FUNCTION
+    # def winner(self, args):
+    #     '''
+    #     Returns either the winning player or prints
+    #     "unfinshed" if game is not over
+    #     '''
+    #     if len(self.get_legal_moves()) == 0:
+    #         if self.player == 1:
+    #             print(2)
+    #         else:
+    #             print(1)
+    #     else:
+    #         print("unfinished")
+    #     return True
+    
+    def is_winner(self, player):
         '''
-        Returns either the winning player or prints
-        "unfinshed" if game is not over
+        Checks if the given player is the winner
         '''
         if len(self.get_legal_moves()) == 0:
-            if self.player == 1:
-                print(2)
+            if self.player == player:
+                print(self.moves)
+                self.show(self)
+                return True
             else:
-                print(1)
+                return False
         else:
-            print("unfinished")
+            return "not over yet"
+    
+    def winner(self):
+        '''
+        Returns who the winner is
+        '''
+        if self.is_winner(1) == True:
+            return 1
+        if self.is_winner(2) == True:
+            return 2
+        return None
+    
+    def minimax_or(self):
+        try:
+            assert self.player == 1
+            if self.winner() != None:
+                return self.is_winner(1)
+            for move in self.get_legal_moves():
+                # print("minimax_OR move for loop",move)
+                self.play(move)
+                is_win = self.minimax_and()
+                self.undo(self)
+                if is_win:
+                    return True
+            return False
+        except Exception as e:
+            print("hmmmm it", e)
+
+    def minimax_and(self):
+        assert self.player == 2
+        if self.winner() != None:
+            return self.is_winner(2)
+        for move in self.get_legal_moves():
+            # print("minimax_AND move for loop",move)
+            self.play(move)
+            is_loss = self.minimax_or()
+            self.undo(self)
+            if is_loss:
+                return False
         return True
     
     # new function to be implemented for assignment 2
@@ -350,8 +414,21 @@ class CommandInterface:
     
     # new function to be implemented for assignment 2
     def solve(self, args):
-        raise NotImplementedError("This command is not yet implemented.")
-        return True
+        try:
+            win = False
+            start = time.process_time()
+            if self.player == 1:
+                win = self.minimax_or()
+            else:
+                win = self.minimax_and()
+            timespent = time.process_time() - start
+            print("FINAL BOARD GAME")
+            self.show(args)
+            print(self.moves)
+            print(timespent, win)
+            return True
+        except Exception as e:
+            print("AHHHHHHHHHH", e)
     
     #===============================================================================================
     # ɅɅɅɅɅɅɅɅɅɅ END OF ASSIGNMENT 2 FUNCTIONS. ɅɅɅɅɅɅɅɅɅɅ
