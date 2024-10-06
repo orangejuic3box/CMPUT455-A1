@@ -4,6 +4,7 @@
 
 import sys
 import random
+import cProfile
 
 class CommandInterface:
 
