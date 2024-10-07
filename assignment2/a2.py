@@ -26,10 +26,13 @@ class CommandInterface:
             "solve" : self.solve,
             "undo" : self.undo
         }
-        self.board = [[None]]
+        self.board = []
+        self.board_dict = {}
         self.player = 1
         self.moves = []
         self.order = 0
+        self.row = 0
+        self.col = 0
     
     #===============================================================================================
     # VVVVVVVVVV START of PREDEFINED FUNCTIONS. DO NOT MODIFY. VVVVVVVVVV
@@ -100,6 +103,19 @@ class CommandInterface:
     # VVVVVVVVVV START OF ASSIGNMENT 2 FUNCTIONS. ADD/REMOVE/MODIFY AS NEEDED. VVVVVVVV
     #===============================================================================================
 
+    def get_index(self, x, y):
+        # x is COL
+        # y is ROW
+        return y * self.col + x
+    
+    def make_dict(self):
+        # n rows
+        # m columns
+        max = self.row * self.col
+        for i in range(max):
+            self.board_dict[i] = None
+        print(self.board_dict)
+
     def game(self, args):
         '''
         Resets a new game for a given n by m board
@@ -110,7 +126,9 @@ class CommandInterface:
         if n < 0 or m < 0:
             print("Invalid board size:", n, m, file=sys.stderr)
             return False
-        
+        self.row = n
+        self.col = m
+        self.make_dict()
         self.board = [] #lists of lists which will contain who occupies which space
         for i in range(m):
             self.board.append([None]*n)
@@ -141,7 +159,6 @@ class CommandInterface:
                 else:
                     print(x, end="")
             print()
-        print(self.board)                    
         return True
 
     def undo(self, args):
@@ -151,13 +168,24 @@ class CommandInterface:
         # print("before")
         # print(self.moves)
         # print(self.board)
+        if not self.moves:
+            return
         order, player, x, y, num = self.moves.pop()
+        index = self.get_index(x, y)
+        self.board_dict = None
         self.board[y][x] = None
         self.switch_player()
         self.order -= 1
         # print(self.moves)
         # print(self.board)
-        return True
+
+    def consecutive(self, x, y, num):
+        '''
+        0 1 2 3
+        4 5 6 7
+        8 9 10 11
+        '''
+        pass
 
     def is_legal_reason(self, x, y, num):
         '''
@@ -360,8 +388,9 @@ class CommandInterface:
         '''
         if len(self.get_legal_moves()) == 0:
             if self.player == player:
-                print(self.moves)
-                self.show(self)
+                # print("current player:", self.player)
+                # print(self.moves)
+                # self.show(self)
                 return True
             else:
                 return False
@@ -378,6 +407,36 @@ class CommandInterface:
             return 2
         return None
     
+    def evaluate_for_current_player(self):
+        winner_is = self.winner()
+        assert winner_is != self.player
+        if winner_is == None:
+            if self.game_over():
+                return 1 #should this be 1?
+            return 2
+        return -10
+        
+    def game_over(self):
+        return (len(self.get_legal_moves())==0 or self.winner()!= None)
+    
+    def negamax_boolean(self):
+        try:
+            # print("hello")
+            if self.game_over():
+                return self.evaluate_for_current_player()
+            for move in self.get_legal_moves():
+                # print("move")
+                self.play(move)
+                success = not self.negamax_boolean()
+                # print("success", success)
+                self.undo(self)
+                if success:
+                    return True
+            return False
+        except Exception as e:
+            print(e)
+
+        
     def minimax_or(self):
         try:
             assert self.player == 1
@@ -409,26 +468,37 @@ class CommandInterface:
     
     # new function to be implemented for assignment 2
     def timelimit(self, args):
-        raise NotImplementedError("This command is not yet implemented.")
+        try:
+            seconds = int(args[0])
+        
+        except ValueError:
+            # print("Argument '{}' cannot be interpreted as an integer.".format(args[0]))
+            return False
+        
+        if not (1 <= seconds <= 100):
+            # print("Invalid time limit: {}\nTime limit must be integer between 1 and 100 inclusive.".format(seconds))
+            return False
+        
+        self.time_limit = seconds
         return True
     
     # new function to be implemented for assignment 2
     def solve(self, args):
-        try:
-            win = False
-            start = time.process_time()
-            if self.player == 1:
-                win = self.minimax_or()
-            else:
-                win = self.minimax_and()
-            timespent = time.process_time() - start
-            print("FINAL BOARD GAME")
-            self.show(args)
-            print(self.moves)
-            print(timespent, win)
-            return True
-        except Exception as e:
-            print("AHHHHHHHHHH", e)
+        start = time.process_time()
+        # win = self.negamax_boolean()
+        # print("jobver?")
+        win = False
+        if self.player == 1:
+            win = self.minimax_or()
+        else:
+            win = self.minimax_and()
+        timespent = time.process_time() - start
+        # print("FINAL BOARD GAME")
+        # self.show(args)
+        # print(self.moves)
+        print(self.player)
+        print(timespent, win)
+        return True
     
     #===============================================================================================
     # ɅɅɅɅɅɅɅɅɅɅ END OF ASSIGNMENT 2 FUNCTIONS. ɅɅɅɅɅɅɅɅɅɅ
