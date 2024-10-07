@@ -114,7 +114,7 @@ class CommandInterface:
         max = self.row * self.col
         for i in range(max):
             self.board_dict[i] = None
-        print(self.board_dict)
+        # print(self.board_dict)
 
     def game(self, args):
         '''
@@ -496,8 +496,13 @@ class CommandInterface:
         # print("FINAL BOARD GAME")
         # self.show(args)
         # print(self.moves)
-        print(self.player)
-        print(timespent, win)
+        # print(self.player)
+        if win:
+            print(1)
+        else:
+            print(2)
+
+        # print(timespent, win)
         return True
     
     #===============================================================================================
